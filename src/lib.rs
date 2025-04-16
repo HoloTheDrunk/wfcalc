@@ -1,21 +1,18 @@
-#![allow(unused)]
 #![feature(let_chains)]
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::collections::hash_map::Entry;
 
-fn main() {
-    println!("Hello, world!");
-}
-
-enum ModEffect {
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum ModEffect {
     Physical(Ips, f32),
     Elemental(Element, f32),
     Bane(Faction, f32),
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
-enum Faction {
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone, Copy)]
+pub enum Faction {
     Grineer,
     Corpus,
     Corrupted,
@@ -23,58 +20,62 @@ enum Faction {
     Murmur,
 }
 
-struct Mod {
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+pub struct Mod {
+    name: Option<String>,
     effects: Vec<ModEffect>,
 }
 
-struct Hit {
+pub struct Hit {
     base_damage: HashMap<DamageType, f32>,
     mods: Vec<Mod>,
     enemy: Enemy,
 }
 
-struct Enemy {
+pub struct Enemy {
     faction: Faction,
     weaknesses: HashMap<DamageType, f32>,
 }
 
-#[derive(Hash, PartialEq, Eq, Clone, Copy)]
-enum DamageType {
+#[derive(Debug, Deserialize, Serialize, Hash, PartialEq, Eq, Clone, Copy)]
+#[serde(untagged)]
+pub enum DamageType {
     Physical(Ips),
     Elemental(Element),
     Special(Special),
 }
 
-#[derive(Hash, PartialEq, Eq, Clone, Copy)]
-enum Ips {
+#[derive(Debug, Deserialize, Serialize, Hash, PartialEq, Eq, Clone, Copy)]
+pub enum Ips {
     Impact,
     Puncture,
     Slash,
 }
 
-#[derive(Hash, PartialEq, Eq, Clone, Copy)]
-enum Element {
+#[derive(Debug, Deserialize, Serialize, Hash, PartialEq, Eq, Clone, Copy)]
+#[serde(untagged)]
+pub enum Element {
     Primary(PrimaryElement),
     Secondary(SecondaryElement),
 }
 
-#[derive(Hash, PartialEq, Eq, Clone, Copy)]
-enum Special {
+#[derive(Debug, Deserialize, Serialize, Hash, PartialEq, Eq, Clone, Copy)]
+pub enum Special {
     Void,
     Tau,
     True,
 }
 
-#[derive(Hash, PartialEq, Eq, Clone, Copy)]
-enum PrimaryElement {
+#[derive(Debug, Deserialize, Serialize, Hash, PartialEq, Eq, Clone, Copy)]
+pub enum PrimaryElement {
     Cold,
     Heat,
     Toxin,
     Electricity,
 }
 
-#[derive(Hash, PartialEq, Eq, Clone, Copy)]
-enum SecondaryElement {
+#[derive(Debug, Deserialize, Serialize, Hash, PartialEq, Eq, Clone, Copy)]
+pub enum SecondaryElement {
     Blast,
     Viral,
     Magnetic,
@@ -84,20 +85,20 @@ enum SecondaryElement {
 }
 
 impl Hit {
-    fn total_base(&self) -> f32 {
+    pub fn total_base(&self) -> f32 {
         self.base_damage.values().sum()
     }
 
-    fn scale(&self) -> f32 {
+    pub fn scale(&self) -> f32 {
         self.total_base() / 16.
     }
 
-    fn quantize(&self, value: f32) -> f32 {
+    pub fn quantize(&self, value: f32) -> f32 {
         let scale = self.scale();
         (value / scale).round() * scale
     }
 
-    fn weakness_to(&self, damage_type: &DamageType) -> f32 {
+    pub fn weakness_to(&self, damage_type: &DamageType) -> f32 {
         self.enemy
             .weaknesses
             .get(damage_type)
@@ -105,7 +106,7 @@ impl Hit {
             .unwrap_or(1.)
     }
 
-    fn contributions(&self) -> HashMap<DamageType, f32> {
+    pub fn contributions(&self) -> HashMap<DamageType, f32> {
         let mut physical_calculator = PhysicalCalculator::new(None);
         let mut elemental_calculator = ElementalCalculator::new(None);
         let mut bane = 1.;
@@ -131,8 +132,6 @@ impl Hit {
                     .map(|v| self.quantize(*v) * self.weakness_to(&DamageType::Physical(ips)))
                     .map(|v| (DamageType::Physical(ips), v))
             });
-
-        // let base = self.base_damage.values().map(|v| self.quantize(*v));
 
         let physical = physical_calculator
             .finalize()
@@ -169,7 +168,7 @@ impl Hit {
         result
     }
 
-    fn total_quantized(&self) -> f32 {
+    pub fn total_quantized(&self) -> f32 {
         let mut physical_calculator = PhysicalCalculator::new(None);
         let mut elemental_calculator = ElementalCalculator::new(None);
         let mut bane = 1.;
@@ -194,19 +193,22 @@ impl Hit {
 struct PhysicalCalculator {
     ips: Vec<(Ips, f32)>,
     // TODO: Add lich damage calculation (based on total or base?)
-    lich: Option<(Ips, f32)>,
+    _lich: Option<(Ips, f32)>,
 }
 
 impl PhysicalCalculator {
-    fn new(lich: Option<(Ips, f32)>) -> Self {
-        Self { ips: vec![], lich }
+    pub fn new(lich: Option<(Ips, f32)>) -> Self {
+        Self {
+            ips: vec![],
+            _lich: lich,
+        }
     }
 
-    fn add(&mut self, ips: Ips, value: f32) {
+    pub fn add(&mut self, ips: Ips, value: f32) {
         self.ips.push((ips, value));
     }
 
-    fn finalize(self) -> HashMap<Ips, f32> {
+    pub fn finalize(self) -> HashMap<Ips, f32> {
         let mut result: HashMap<Ips, f32> = Default::default();
 
         for (ips, value) in self.ips {
@@ -220,7 +222,7 @@ impl PhysicalCalculator {
 struct ElementalCalculator {
     primary: Vec<(PrimaryElement, f32)>,
     secondary: Vec<(SecondaryElement, f32)>,
-    lich: Option<(Element, f32)>,
+    _lich: Option<(Element, f32)>,
 }
 
 macro_rules! map {
@@ -249,7 +251,7 @@ impl ElementalCalculator {
         Self {
             primary: vec![],
             secondary: vec![],
-            lich,
+            _lich: lich,
         }
     }
 
@@ -260,7 +262,7 @@ impl ElementalCalculator {
         }
     }
 
-    fn finalize(mut self) -> HashMap<Element, f32> {
+    fn finalize(self) -> HashMap<Element, f32> {
         let mut result: HashMap<Element, f32> = Default::default();
 
         for (elem, value) in self.primary {
@@ -300,7 +302,7 @@ impl ElementalCalculator {
             }
         }
 
-        if (was_combined) {
+        if was_combined {
             return;
         }
 
@@ -341,6 +343,7 @@ mod test {
     #[test]
     fn nagantaka_prime_wiki() {
         let cryo_rounds = Mod {
+            name: Some("Cryo Rounds".to_owned()),
             effects: vec![ModEffect::Elemental(
                 Element::Primary(PrimaryElement::Cold),
                 0.9,
@@ -348,6 +351,7 @@ mod test {
         };
 
         let malignant_force = Mod {
+            name: Some("Malignant Force".to_owned()),
             effects: vec![ModEffect::Elemental(
                 Element::Primary(PrimaryElement::Toxin),
                 0.6,
@@ -355,6 +359,7 @@ mod test {
         };
 
         let hellfire = Mod {
+            name: Some("Hellfire".to_owned()),
             effects: vec![ModEffect::Elemental(
                 Element::Primary(PrimaryElement::Heat),
                 0.9,
@@ -362,10 +367,12 @@ mod test {
         };
 
         let piercing_caliber = Mod {
+            name: Some("Piercing Caliber".to_owned()),
             effects: vec![ModEffect::Physical(Ips::Puncture, 1.2)],
         };
 
         let valence_formation_gas = Mod {
+            name: Some("Valence Formation - Gas".to_owned()),
             effects: vec![ModEffect::Elemental(
                 Element::Secondary(SecondaryElement::Gas),
                 2.,
@@ -394,6 +401,73 @@ mod test {
 
         assert_f32_near!(hit.total_base(), 173.);
         assert_f32_near!(hit.scale(), 10.8125);
+
+        let contributions = hit.contributions();
+        assert_f32_near!(
+            *contributions
+                .get(&DamageType::Physical(Ips::Impact))
+                .unwrap(),
+            0.
+        );
+        assert_f32_near!(
+            *contributions
+                .get(&DamageType::Physical(Ips::Puncture))
+                .unwrap(),
+            10.8125 + 21.625
+        );
+        assert_f32_near!(
+            *contributions
+                .get(&DamageType::Physical(Ips::Slash))
+                .unwrap(),
+            151.375
+        );
+        assert_f32_near!(
+            *contributions
+                .get(&DamageType::Elemental(Element::Secondary(
+                    SecondaryElement::Viral
+                )))
+                .unwrap(),
+            259.5
+        );
+        assert_f32_near!(
+            *contributions
+                .get(&DamageType::Elemental(Element::Primary(
+                    PrimaryElement::Heat
+                )))
+                .unwrap(),
+            151.375
+        );
+        assert_f32_near!(
+            *contributions
+                .get(&DamageType::Elemental(Element::Secondary(
+                    SecondaryElement::Gas
+                )))
+                .unwrap(),
+            346.
+        );
+
         assert_f32_near!(hit.total_quantized(), 940.6875);
+    }
+
+    #[test]
+    fn mod_serde() {
+        let cryo_rounds = Mod {
+            name: Some("Cryo Rounds".to_owned()),
+            effects: vec![ModEffect::Elemental(
+                Element::Primary(PrimaryElement::Cold),
+                0.9,
+            )],
+        };
+
+        let text = ron::ser::to_string_pretty(&cryo_rounds, ron::ser::PrettyConfig::default())
+            .expect("Mods should be ron-serializable.");
+
+        std::fs::write("test.ron", text.as_str()).expect("Test file should be writable.");
+        let text = std::fs::read_to_string("test.ron").expect("Test file should be readable.");
+
+        let parsed =
+            ron::de::from_str::<Mod>(text.as_str()).expect("Mods should be ron-deserializable.");
+
+        assert_eq!(cryo_rounds, parsed);
     }
 }
