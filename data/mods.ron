@@ -1,0 +1,14 @@
+[
+    (
+        name: "Cryo Rounds",
+        effects: [
+            (Cold, 0.9),
+        ],
+    ),
+    (
+        name: "Malignant Force",
+        effects: [
+            (Toxin, 0.6),
+        ],
+    )
+]
