@@ -14,6 +14,12 @@ pub enum ModEffect {
     Physical(Ips, f32),
     Elemental(Element, f32),
     Bane(Faction, f32),
+    StatusChance(f32),
+    StatusDuration(f32),
+    StatusDamage(f32),
+    SpecificStatusDamage(Element, f32),
+    CriticalChance(f32),
+    CriticalDamage(f32),
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
@@ -50,18 +56,7 @@ mod test {
 
     #[test]
     fn load_mods() {
-        let lib = ModLibrary::load(Path::new("data/mods.ron"));
-
-        // let expected = Mod {
-        //     name: "Cryo Rounds".to_owned(),
-        //     effects: vec![ModEffect::Elemental(
-        //         Element::Primary(PrimaryElement::Cold),
-        //         0.9,
-        //     )],
-        // };
-        
-        
-
+        ModLibrary::load(Path::new("data/mods.ron"));
     }
 
     #[test]

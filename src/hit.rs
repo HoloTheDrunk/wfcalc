@@ -29,17 +29,14 @@ impl Hit {
     pub fn contributions(&self) -> HashMap<DamageType, f32> {
         let mut physical_calculator = PhysicalCalculator::new(None);
         let mut elemental_calculator = ElementalCalculator::new(None);
-        let mut bane = 1.;
 
         for r#mod in self.mods.iter() {
             for effect in r#mod.effects.iter() {
                 match effect {
                     ModEffect::Physical(ips, value) => physical_calculator.add(*ips, *value),
                     ModEffect::Elemental(elem, value) => elemental_calculator.add(*elem, *value),
-                    ModEffect::Bane(faction, value) if self.enemy.faction == *faction => {
-                        bane += value
-                    }
-                    ModEffect::Bane(_, _) => println!("Inactive bane"),
+                    // We don't care about other mods when calculating contributions
+                    _ => (),
                 }
             }
         }
@@ -84,30 +81,52 @@ impl Hit {
 
         base.chain(physical)
             .chain(elemental)
-            .for_each(|(dt, value)| *result.entry(dt).or_insert(0.) += value * bane);
+            .for_each(|(dt, value)| *result.entry(dt).or_insert(0.) += value);
 
         result
     }
 
     pub fn total_quantized(&self) -> f32 {
-        let mut physical_calculator = PhysicalCalculator::new(None);
-        let mut elemental_calculator = ElementalCalculator::new(None);
         let mut bane = 1.;
 
         for r#mod in self.mods.iter() {
             for effect in r#mod.effects.iter() {
                 match effect {
-                    ModEffect::Physical(ips, value) => physical_calculator.add(*ips, *value),
-                    ModEffect::Elemental(elem, value) => elemental_calculator.add(*elem, *value),
                     ModEffect::Bane(faction, value) if self.enemy.faction == *faction => {
                         bane += value
                     }
-                    ModEffect::Bane(_, _) => println!("Inactive bane"),
+                    _ => (),
                 }
             }
         }
+        self.contributions().values().sum::<f32>() * bane
+    }
 
-        self.contributions().values().sum()
+    pub fn status_chance(&self) -> HashMap<DamageType, f32> {
+        let contributions = self.contributions();
+        let total_dmg = contributions.values().sum::<f32>();
+
+        let mod_sc = self
+            .mods
+            .iter()
+            .filter_map(|m| {
+                m.effects.iter().find_map(|e| {
+                    if let ModEffect::StatusChance(sc) = e {
+                        Some(sc)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .sum::<f32>();
+        // TODO: Create Weapon data structure
+        let total_sc = mod_sc;
+        todo!();
+
+        contributions
+            .into_iter()
+            .map(|(ty, damage)| (ty, (damage / total_dmg) * total_sc) )
+            .collect()
     }
 }
 
@@ -237,7 +256,7 @@ impl ElementalCalculator {
 
 #[cfg(test)]
 mod test {
-    use std::{path::Path, sync::Once};
+    use std::path::Path;
 
     use crate::{enemy::Faction, mods::ModLibrary};
 
