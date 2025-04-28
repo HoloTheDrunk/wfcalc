@@ -1,7 +1,7 @@
 use crate::{
     damage::*,
     enemy::Enemy,
-    mods::{Mod, ModEffect},
+    mods::{Mod, ModEffect, ModStat},
 };
 
 use std::collections::HashMap;
@@ -31,7 +31,7 @@ impl Hit {
         let mut elemental_calculator = ElementalCalculator::new(None);
 
         for r#mod in self.mods.iter() {
-            for effect in r#mod.effects.iter() {
+            for ModStat { effect, .. } in r#mod.stats.iter() {
                 match effect {
                     ModEffect::Physical(ips, value) => physical_calculator.add(*ips, *value),
                     ModEffect::Elemental(elem, value) => elemental_calculator.add(*elem, *value),
@@ -90,7 +90,7 @@ impl Hit {
         let mut bane = 1.;
 
         for r#mod in self.mods.iter() {
-            for effect in r#mod.effects.iter() {
+            for ModStat { effect, .. } in r#mod.stats.iter() {
                 match effect {
                     ModEffect::Bane(faction, value) if self.enemy.faction == *faction => {
                         bane += value
@@ -110,8 +110,8 @@ impl Hit {
             .mods
             .iter()
             .filter_map(|m| {
-                m.effects.iter().find_map(|e| {
-                    if let ModEffect::StatusChance(sc) = e {
+                m.stats.iter().find_map(|ModStat { effect, .. }| {
+                    if let ModEffect::StatusChance(sc) = effect {
                         Some(sc)
                     } else {
                         None
@@ -125,7 +125,7 @@ impl Hit {
 
         contributions
             .into_iter()
-            .map(|(ty, damage)| (ty, (damage / total_dmg) * total_sc) )
+            .map(|(ty, damage)| (ty, (damage / total_dmg) * total_sc))
             .collect()
     }
 }
@@ -303,23 +303,17 @@ mod test {
 
         let hellfire = Mod {
             name: "Hellfire".to_owned(),
-            effects: vec![ModEffect::Elemental(
-                Element::Primary(PrimaryElement::Heat),
-                0.9,
-            )],
+            stats: vec![ModEffect::Elemental(Element::Primary(PrimaryElement::Heat), 0.9).into()],
         };
 
         let piercing_caliber = Mod {
             name: "Piercing Caliber".to_owned(),
-            effects: vec![ModEffect::Physical(Ips::Puncture, 1.2)],
+            stats: vec![ModEffect::Physical(Ips::Puncture, 1.2).into()],
         };
 
         let valence_formation_gas = Mod {
             name: "Valence Formation - Gas".to_owned(),
-            effects: vec![ModEffect::Elemental(
-                Element::Secondary(SecondaryElement::Gas),
-                2.,
-            )],
+            stats: vec![ModEffect::Elemental(Element::Secondary(SecondaryElement::Gas), 2.).into()],
         };
 
         let hit = Hit {

@@ -1,14 +1,52 @@
 [
     (
+        name: "Galvanized Chamber",
+        stats: [
+            (
+                trigger: None,
+                stacking: None,
+                effect: Multishot(0.8),
+            ),
+            (
+                trigger: Some(Kill),
+                stacking: Some((
+                    max: 5,
+                    behaviour: Timed(
+                        duration: (
+                            secs: 20,
+                            nanos: 0,
+                        ),
+                        timeout: Reduce(Flat(1)),
+                        resets_on_stack: true,
+                    ),
+                )),
+                effect: Multishot(0.3),
+            ),
+        ],
+    ),
+    (
         name: "Cryo Rounds",
-        effects: [
-            (Cold, 0.9),
+        stats: [
+            (
+                trigger: None,
+                stacking: None,
+                effect: Elemental(Cold, .9),
+            ),
         ],
     ),
     (
         name: "Malignant Force",
-        effects: [
-            (Toxin, 0.6),
+        stats: [
+            (
+                trigger: None,
+                stacking: None,
+                effect: Elemental(Toxin, .6),
+            ),
+            (
+                trigger: None,
+                stacking: None,
+                effect: StatusChance(.6),
+            ),
         ],
-    )
+    ),
 ]
